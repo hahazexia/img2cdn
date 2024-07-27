@@ -4,7 +4,7 @@ Upload image to cdn, Visual Studio Code Extension
 
 ## Features
 
-![feature](./img2cdn_feature.gif)
+![feature](https://cdn.meeting.tencent.com/0eebc2f76e4cf9464add9eb9e0248b6d.gif)
 
 ## Extension Settings
 
