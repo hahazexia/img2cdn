@@ -2,10 +2,6 @@
 
 Upload image to cdn, Visual Studio Code Extension
 
-## Features
-
-![feature](https://cdn.meeting.tencent.com/0eebc2f76e4cf9464add9eb9e0248b6d.gif)
-
 ## Extension Settings
 
 Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
