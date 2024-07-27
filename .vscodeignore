@@ -10,6 +10,5 @@ vsc-extension-quickstart.md
 **/.vscode-test.*
 test-file/**
 node_modules
-*.gif
 *.lock
 *.yarnrc
