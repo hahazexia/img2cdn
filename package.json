@@ -1,0 +1,67 @@
+{
+  "name": "img2cdn",
+  "displayName": "img2cdn",
+  "description": "upload image to cdn",
+  "version": "0.0.1",
+  "icon": "./img2cdn.gif",
+  "engines": {
+    "vscode": "^1.91.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "extension.uploadImage",
+        "title": "Hello World"
+      }
+    ],
+    "configuration": {
+      "title": "img2cdn Configuration",
+      "properties": {
+        "img2cdn.uploadApiUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Customize the upload image api used by the extension."
+        },
+        "img2cdn.uploadApiResKey": {
+          "type": "string",
+          "default": "res.data.data",
+          "description": "Customize the upload image api response key."
+        },
+        "img2cdn.language": {
+          "type": "string",
+          "default": "zh",
+          "description": "Customize the logger language used by the extension."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "yarn run lint",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.7",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.91.0",
+    "@vscode/test-cli": "^0.0.9",
+    "@vscode/test-electron": "^2.4.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "esm": "^3.2.25",
+    "filesize": "^10.1.4",
+    "image-size": "^1.1.1",
+    "js-base64": "^3.7.7",
+    "tmp": "^0.2.3"
+  }
+}

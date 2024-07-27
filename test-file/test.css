@@ -1,0 +1,8 @@
+.before {
+    top: getPercent(-125, 1484);
+    left: getPercent(-162, 1280);
+    height: getPercent(322, 1484);
+    width: getPercent(322, 1280);
+    z-index: 0;
+    background-image: url(./elem-scene4.png);
+  }
