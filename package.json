@@ -2,7 +2,7 @@
   "name": "img2cdn",
   "displayName": "img2cdn",
   "description": "upload image to cdn",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "icon": "./img2cdn.gif",
   "author": "hahazexia",
   "publisher": "hahazexia",
@@ -24,7 +24,7 @@
   "activationEvents": [
     "onStartupFinished"
   ],
-  "main": "./extension.js",
+  "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
@@ -49,6 +49,11 @@
           "type": "string",
           "default": "zh",
           "description": "Customize the logger language used by the extension."
+        },
+        "img2cdn.imagePathWhitelist": {
+          "type": "string",
+          "default": "[]",
+          "description": "string array, if image url includes some string in imagePathWhitelist, there will not show upload btn"
         }
       }
     }
@@ -56,7 +61,8 @@
   "scripts": {
     "lint": "eslint .",
     "pretest": "yarn run lint",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "build": "rollup -c"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.7",
@@ -68,11 +74,15 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
+    "@babel/core": "^7.24.9",
+    "@babel/preset-env": "^7.25.0",
+    "@rollup/plugin-babel": "^6.0.4",
     "axios": "^1.7.2",
     "esm": "^3.2.25",
     "filesize": "^10.1.4",
     "image-size": "^1.1.1",
     "js-base64": "^3.7.7",
+    "rollup": "^4.19.1",
     "tmp": "^0.2.3"
   }
 }

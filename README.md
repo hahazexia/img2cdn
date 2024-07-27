@@ -17,6 +17,7 @@ This extension contributes the following settings:
 * `img2cdn.uploadApiUrl`: backend api url for upload image.
 * `img2cdn.uploadApiResKey`: After the plugin sends a request to upload an image and receives a response, it will obtain the image URL according to the format of the `uploadApiResKey` field, such as `res.data.data`.
 * `img2cdn.language`: default message language, `en` or `zh`.
+* `img2cdn.imagePathWhitelist`: string array, if image url includes some string in imagePathWhitelist, there will not show upload btn.
 
 ## Release Notes
 

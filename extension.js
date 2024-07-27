@@ -5,10 +5,19 @@ const path = require('path');
 const url = require('url');
 const os = require('os');
 const FormData = require('form-data');
-const { filesize } = require('./filesize');
 const sizeOf = require('image-size');
 const tmp = require('tmp');
 
+// import * as vscode from 'vscode';
+// import axios from 'axios';
+// import fs from 'fs';
+// import path from 'path';
+// import url from 'url';
+// import os from 'os';
+// import FormData from 'form-data';
+// import sizeOf from 'image-size';
+// import tmp from 'tmp';
+// import {filesize} from 'filesize';
 
 const tempDir = os.tmpdir();
 const tempPath = path.join(tempDir, `./img2cdntemp`);
@@ -52,11 +61,14 @@ class ImageCodeLensProvider {
       const imageRegex = /(import\s*([^\s]+)\s*from\s*)?(['"`]|url\(['"`]?|src=['"`])(.*\.(?:png|jpg|jpeg|gif|bmp|svg))/g;
       const content = document.getText();
       const codeLenses = [];
-  
+
+      const config = vscode.workspace.getConfiguration('img2cdn');
+      const imagePathWhitelist = JSON.parse(config.get('imagePathWhitelist'));
+
       let match;
       while ((match = imageRegex.exec(content)) !== null) {
         const imagePath = match[4];
-        if (imagePath.includes('cdn.meeting.tencent.com')) continue;
+        if (imagePathWhitelist.some((i) => imagePath.includes(i))) continue;
         const prefix = match[3];
         const importModuleName = match[2];
         const importPrefix = match[1];
@@ -136,7 +148,7 @@ class ImageHoverProvider {
       const absoluteImagePath = imagePath.startsWith('http') ? imagePath : vscode.Uri.file(path.resolve(document.uri.fsPath, '..', imagePath)).toString().replace(/file:\/*/g, '');
       let localImagePath = absoluteImagePath.startsWith('http') ? await download(absoluteImagePath) : absoluteImagePath;
       const dimensions = getFileDimensions(localImagePath);
-      const filesize = getFilesize(localImagePath);
+      const filesize = await getFilesize(localImagePath);
       let maxSizeConfig;
       if (dimensions.width > dimensions.height) {
         maxSizeConfig = `|width=${dimensions.width > 500 ? 500 : dimensions.width}`;
@@ -155,6 +167,7 @@ class ImageHoverProvider {
 
 function getFileDimensions (source) {
   try {
+    console.log(sizeOf, 'sizeOf 看看');
     const dimensions = sizeOf(source);
     console.log(dimensions.width, dimensions.height)
     return dimensions;
@@ -164,9 +177,10 @@ function getFileDimensions (source) {
   }
 }
 
-function getFilesize(source) {
+async function getFilesize(source) {
   try {
     const fsStat = fs.statSync(source);
+    const { filesize } = await import('filesize');
     return filesize(fsStat.size, { standard: 'jedec' });
   } catch (err) {
     console.error(`Failed to get filesize: ${source}`, err);
