@@ -21167,11 +21167,12 @@ var ImageCodeLensProvider = /*#__PURE__*/function () {
         var content = document.getText();
         var codeLenses = [];
         var config = vscode.workspace.getConfiguration('img2cdn');
-        var imagePathWhitelist = JSON.parse(config.get('imagePathWhitelist'));
+        var imagePathWhitelist = config.get('imagePathWhitelist');
+        var imagePathWhitelistArr = imagePathWhitelist ? imagePathWhitelist.split(',') : [];
         var match;
         var _loop = function _loop() {
           var imagePath = match[4];
-          if (imagePathWhitelist.some(function (i) {
+          if (imagePathWhitelistArr.some(function (i) {
             return imagePath.includes(i);
           })) return 1; // continue
           var prefix = match[3];
@@ -21329,7 +21330,7 @@ function _getFilesize() {
           _context3.prev = 0;
           fsStat = fs.statSync(source);
           _context3.next = 4;
-          return Promise.resolve().then(function () { return require('./filesize.esm-CI3nAPrd.js'); });
+          return Promise.resolve().then(function () { return require('./filesize.esm-DSD5bWnP.js'); });
         case 4:
           _yield$import = _context3.sent;
           filesize = _yield$import.filesize;

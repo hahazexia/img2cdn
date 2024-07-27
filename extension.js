@@ -63,12 +63,13 @@ class ImageCodeLensProvider {
       const codeLenses = [];
 
       const config = vscode.workspace.getConfiguration('img2cdn');
-      const imagePathWhitelist = JSON.parse(config.get('imagePathWhitelist'));
+      const imagePathWhitelist = config.get('imagePathWhitelist');
+      const imagePathWhitelistArr = imagePathWhitelist ? imagePathWhitelist.split(',') : [];
 
       let match;
       while ((match = imageRegex.exec(content)) !== null) {
         const imagePath = match[4];
-        if (imagePathWhitelist.some((i) => imagePath.includes(i))) continue;
+        if (imagePathWhitelistArr.some((i) => imagePath.includes(i))) continue;
         const prefix = match[3];
         const importModuleName = match[2];
         const importPrefix = match[1];

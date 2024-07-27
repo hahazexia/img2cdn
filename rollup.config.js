@@ -2,6 +2,7 @@ const babel = require('@rollup/plugin-babel').default;
 const resolve = require('@rollup/plugin-node-resolve').default;
 const commonjs = require('@rollup/plugin-commonjs');
 const json = require('@rollup/plugin-json');
+const del = require('rollup-plugin-delete');
 
 module.exports = {
   input: './extension.js', // 插件的入口文件
@@ -11,6 +12,7 @@ module.exports = {
     entryFileNames: 'extension.js' // 入口文件的输出名称
   },
   plugins: [
+    del({ targets: 'dist/*' }),
     resolve(), // 解析 node_modules 中的模块
     commonjs(), // 转换 CommonJS 模块
     json(), // 支持导入 JSON 文件
@@ -27,5 +29,6 @@ module.exports = {
         ],
       ],
     }),
+    
   ],
 };
