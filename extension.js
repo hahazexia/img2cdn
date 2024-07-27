@@ -174,7 +174,7 @@ function getFileDimensions (source) {
     return dimensions;
   } catch (err) {
     console.error(`Failed to get file dimensions: ${source}`, err);
-    vscode.window.showInformationMessage(language === 'zh' ? `获取图片宽高失败: ${source}` : `Failed to get file dimensions: ${source}`);
+    vscode.window.showErrorMessage(language === 'zh' ? `获取图片宽高失败: ${source}` : `Failed to get file dimensions: ${source}`);
   }
 }
 
@@ -185,7 +185,7 @@ async function getFilesize(source) {
     return filesize(fsStat.size, { standard: 'jedec' });
   } catch (err) {
     console.error(`Failed to get filesize: ${source}`, err);
-    vscode.window.showInformationMessage(language === 'zh' ? `获取图片大小失败: ${source}` : `Failed to get filesize: ${source}`);
+    vscode.window.showErrorMessage(language === 'zh' ? `获取图片大小失败: ${source}` : `Failed to get filesize: ${source}`);
     return '';
   }
 }

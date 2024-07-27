@@ -21315,7 +21315,7 @@ function getFileDimensions(source) {
     return dimensions;
   } catch (err) {
     console.error("Failed to get file dimensions: ".concat(source), err);
-    vscode.window.showInformationMessage(language === 'zh' ? "\u83B7\u53D6\u56FE\u7247\u5BBD\u9AD8\u5931\u8D25: ".concat(source) : "Failed to get file dimensions: ".concat(source));
+    vscode.window.showErrorMessage(language === 'zh' ? "\u83B7\u53D6\u56FE\u7247\u5BBD\u9AD8\u5931\u8D25: ".concat(source) : "Failed to get file dimensions: ".concat(source));
   }
 }
 function getFilesize(_x8) {
@@ -21330,7 +21330,7 @@ function _getFilesize() {
           _context3.prev = 0;
           fsStat = fs.statSync(source);
           _context3.next = 4;
-          return Promise.resolve().then(function () { return require('./filesize.esm-DSD5bWnP.js'); });
+          return Promise.resolve().then(function () { return require('./filesize.esm-BC3K73TC.js'); });
         case 4:
           _yield$import = _context3.sent;
           filesize = _yield$import.filesize;
@@ -21341,7 +21341,7 @@ function _getFilesize() {
           _context3.prev = 9;
           _context3.t0 = _context3["catch"](0);
           console.error("Failed to get filesize: ".concat(source), _context3.t0);
-          vscode.window.showInformationMessage(language === 'zh' ? "\u83B7\u53D6\u56FE\u7247\u5927\u5C0F\u5931\u8D25: ".concat(source) : "Failed to get filesize: ".concat(source));
+          vscode.window.showErrorMessage(language === 'zh' ? "\u83B7\u53D6\u56FE\u7247\u5927\u5C0F\u5931\u8D25: ".concat(source) : "Failed to get filesize: ".concat(source));
           return _context3.abrupt("return", '');
         case 14:
         case "end":
