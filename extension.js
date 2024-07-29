@@ -145,8 +145,8 @@ class ImageHoverProvider {
 
     if (range) {
       let imagePath = document.getText(range);
-      imagePath = imagePath.replace(/^import\s*([^\s]+)\s*from\s*|['"`]|url\(['"`]?|src=['"`]/g, '');
-      const absoluteImagePath = imagePath.startsWith('http') ? imagePath : vscode.Uri.file(path.resolve(document.uri.fsPath, '..', imagePath)).toString().replace(/file:\/*/g, '');
+      imagePath = imagePath.replace(/^import\s*([^\s]+)\s*from\s*|['"`]|url\(['"`]?|src=['"`]|.*\:\s*['"`]/g, '');
+      const absoluteImagePath = imagePath.startsWith('http') ? imagePath : vscode.Uri.file(path.resolve(path.dirname(document.uri.fsPath), imagePath)).toString().replace(/file:\/*/g, '');
       let localImagePath = absoluteImagePath.startsWith('http') ? await download(absoluteImagePath) : absoluteImagePath;
       const dimensions = getFileDimensions(localImagePath);
       const filesize = await getFilesize(localImagePath);
@@ -168,7 +168,7 @@ class ImageHoverProvider {
 
 function getFileDimensions (source) {
   try {
-    console.log(sizeOf, 'sizeOf 看看');
+    console.log(source, 'source 看看');
     const dimensions = sizeOf(source);
     console.log(dimensions.width, dimensions.height)
     return dimensions;

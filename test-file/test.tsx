@@ -6,7 +6,7 @@ const data = {
 };
 
 const obj = {
-  icon: 'https://cdn.meeting.tencent.com/assets/next-website/_next/static/images/step1-2ab0f0d9c1a79499.png',
+  icon: './feature1-1.png',
   title: '提交申请',
 };
 

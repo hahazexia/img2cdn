@@ -13203,6 +13203,7 @@ function requireBrowser() {
       if (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/(edge|trident)\/(\d+)/)) {
         return false;
       }
+      var m;
 
       // Is webkit? http://stackoverflow.com/a/16459606/376773
       // document is undefined in react-native: https://github.com/facebook/react-native/pull/1632
@@ -13211,7 +13212,7 @@ function requireBrowser() {
       typeof window !== 'undefined' && window.console && (window.console.firebug || window.console.exception && window.console.table) ||
       // Is firefox >= v31?
       // https://developer.mozilla.org/en-US/docs/Tools/Web_Console#Styling_messages
-      typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/) && parseInt(RegExp.$1, 10) >= 31 ||
+      typeof navigator !== 'undefined' && navigator.userAgent && (m = navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/)) && parseInt(m[1], 10) >= 31 ||
       // Double check webkit in userAgent just in case we are in a worker
       typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/applewebkit\/(\d+)/);
     }
@@ -21262,8 +21263,8 @@ var ImageHoverProvider = /*#__PURE__*/function () {
                 break;
               }
               imagePath = document.getText(range);
-              imagePath = imagePath.replace(/^import\s*([^\s]+)\s*from\s*|['"`]|url\(['"`]?|src=['"`]/g, '');
-              absoluteImagePath = imagePath.startsWith('http') ? imagePath : vscode.Uri.file(path.resolve(document.uri.fsPath, '..', imagePath)).toString().replace(/file:\/*/g, '');
+              imagePath = imagePath.replace(/^import\s*([^\s]+)\s*from\s*|['"`]|url\(['"`]?|src=['"`]|.*\:\s*['"`]/g, '');
+              absoluteImagePath = imagePath.startsWith('http') ? imagePath : vscode.Uri.file(path.resolve(path.dirname(document.uri.fsPath), imagePath)).toString().replace(/file:\/*/g, '');
               if (!absoluteImagePath.startsWith('http')) {
                 _context2.next = 12;
                 break;
@@ -21309,7 +21310,7 @@ var ImageHoverProvider = /*#__PURE__*/function () {
 }();
 function getFileDimensions(source) {
   try {
-    console.log(sizeOf, 'sizeOf 看看');
+    console.log(source, 'source 看看');
     var dimensions = sizeOf(source);
     console.log(dimensions.width, dimensions.height);
     return dimensions;
@@ -21330,7 +21331,7 @@ function _getFilesize() {
           _context3.prev = 0;
           fsStat = fs.statSync(source);
           _context3.next = 4;
-          return Promise.resolve().then(function () { return require('./filesize.esm-BC3K73TC.js'); });
+          return Promise.resolve().then(function () { return require('./filesize.esm-GvitUxa1.js'); });
         case 4:
           _yield$import = _context3.sent;
           filesize = _yield$import.filesize;

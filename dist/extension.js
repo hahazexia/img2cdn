@@ -1,6 +1,6 @@
 'use strict';
 
-var extension = require('./extension-BrDlmuJr.js');
+var extension = require('./extension--9SmsAw5.js');
 require('vscode');
 require('util');
 require('stream');
