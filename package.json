@@ -2,12 +2,12 @@
   "name": "img2cdn",
   "displayName": "img2cdn",
   "description": "upload image to cdn",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "icon": "./img2cdn.gif",
   "author": "hahazexia",
   "publisher": "hahazexia",
   "engines": {
-    "vscode": "^1.91.0"
+    "vscode": "^1.90.1"
   },
   "repository": {
     "type": "git",
