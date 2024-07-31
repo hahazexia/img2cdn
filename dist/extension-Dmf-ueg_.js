@@ -21331,7 +21331,7 @@ function _getFilesize() {
           _context3.prev = 0;
           fsStat = fs.statSync(source);
           _context3.next = 4;
-          return Promise.resolve().then(function () { return require('./filesize.esm-GvitUxa1.js'); });
+          return Promise.resolve().then(function () { return require('./filesize.esm-DfzJutQp.js'); });
         case 4:
           _yield$import = _context3.sent;
           filesize = _yield$import.filesize;
@@ -21498,7 +21498,7 @@ function replaceImage(_x19, _x20, _x21, _x22, _x23, _x24) {
 }
 function _replaceImage() {
   _replaceImage = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee7(cdnUrl, document, range, originalImagePath, importRangeArr, isLocal) {
-    var name, edit, importLineRange, _edit, lineNumber, line, startPosition, endPosition, _range, commentText, textEdit, workspaceEdit, refs;
+    var name, edit, importLineRange, _edit, lineNumber, line, startPosition, endPosition, _range, commentText, textEdit, workspaceEdit, refs, config, deleteLocalImage;
     return _regeneratorRuntime().wrap(function _callee7$(_context7) {
       while (1) switch (_context7.prev = _context7.next) {
         case 0:
@@ -21510,17 +21510,20 @@ function _replaceImage() {
           return vscode.workspace.applyEdit(edit);
         case 6:
           if (!(importRangeArr.length > 0)) {
-            _context7.next = 22;
+            _context7.next = 23;
             break;
           }
           importLineRange = importRangeArr.shift();
+          if (importRangeArr[0].start.line === importLineRange.start.line) {
+            importRangeArr.shift();
+          }
           _edit = new vscode.WorkspaceEdit();
           importRangeArr.forEach(function (item) {
             _edit.replace(document.uri, item, "'".concat(cdnUrl, "'"));
           });
-          _context7.next = 12;
+          _context7.next = 13;
           return vscode.workspace.applyEdit(_edit);
-        case 12:
+        case 13:
           lineNumber = importLineRange.start.line;
           line = document.lineAt(lineNumber);
           startPosition = new vscode.Position(lineNumber, 0);
@@ -21533,42 +21536,39 @@ function _replaceImage() {
           workspaceEdit = new vscode.WorkspaceEdit();
           workspaceEdit.set(document.uri, [textEdit]);
           vscode.workspace.applyEdit(workspaceEdit);
-        case 22:
+        case 23:
           if (!isLocal) {
             vscode.window.showInformationMessage(language === 'zh' ? "\u672C\u5730\u56FE\u7247".concat(name, " \u66FF\u6362 cdn \u5730\u5740\u6210\u529F") : "Replace the CDN URL with the local image URL successfully: ".concat(name));
           }
-          _context7.next = 25;
+          _context7.next = 26;
           return vscode.workspace.findFiles(name, '**​/node_modules/**', Infinity);
-        case 25:
+        case 26:
           refs = _context7.sent;
           console.log(refs, '看看refs');
-
-          // if (isLocal) {
-          //   vscode.window.showInformationMessage(
-          //     // `The replacement of the image URL with the CDN URL was successful. Do you agree to delete the local image: ${name}?`,
-          //     `替换 cdn 地址成功，是否将本地图片 ${name} 删除?`,
-          //     { modal: true },
-          //     'Yes',
-          //     'No',
-          //   ).then(result => {
-          //     if (result === 'Yes') {
-          //       fs.unlinkSync(originalImagePath);
-          //       vscode.window.showInformationMessage(`本地图片删除成功: ${name}`);
-          //     }
-          //   });
-          // }
-          _context7.next = 33;
+          config = vscode.workspace.getConfiguration('img2cdn');
+          deleteLocalImage = config.get('deleteLocalImage');
+          if (isLocal && deleteLocalImage) {
+            vscode.window.showInformationMessage(language === 'zh' ? "\u66FF\u6362 cdn \u5730\u5740\u6210\u529F\uFF0C\u662F\u5426\u5C06\u672C\u5730\u56FE\u7247 ".concat(name, " \u5220\u9664?") : "The replacement of the image URL with the CDN URL was successful. Do you agree to delete the local image: ".concat(name, "?"), {
+              modal: true
+            }, 'Yes', 'No').then(function (result) {
+              if (result === 'Yes') {
+                fs.unlinkSync(originalImagePath);
+                vscode.window.showInformationMessage("\u672C\u5730\u56FE\u7247\u5220\u9664\u6210\u529F: ".concat(name));
+              }
+            });
+          }
+          _context7.next = 37;
           break;
-        case 29:
-          _context7.prev = 29;
+        case 33:
+          _context7.prev = 33;
           _context7.t0 = _context7["catch"](0);
           console.error("Failed to replace CDN URL: ".concat(cdnUrl), _context7.t0);
           vscode.window.showErrorMessage(language === 'zh' ? "".concat(getBasenameFormUrl(originalImagePath), " \u66FF\u6362 cdn \u5730\u5740\u5931\u8D25: ").concat(cdnUrl) : "Failed to replace CDN URL: ".concat(cdnUrl));
-        case 33:
+        case 37:
         case "end":
           return _context7.stop();
       }
-    }, _callee7, null, [[0, 29]]);
+    }, _callee7, null, [[0, 33]]);
   }));
   return _replaceImage.apply(this, arguments);
 }

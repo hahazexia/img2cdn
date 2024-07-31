@@ -284,6 +284,9 @@ async function replaceImage(cdnUrl, document, range, originalImagePath, importRa
 
     if (importRangeArr.length > 0) {
       const importLineRange = importRangeArr.shift();
+      if (importRangeArr[0].start.line === importLineRange.start.line) {
+        importRangeArr.shift();
+      }
 
       const edit = new vscode.WorkspaceEdit();
       importRangeArr.forEach(item => {
@@ -316,20 +319,24 @@ async function replaceImage(cdnUrl, document, range, originalImagePath, importRa
     console.log(refs, '看看refs');
 
 
-    // if (isLocal) {
-    //   vscode.window.showInformationMessage(
-    //     // `The replacement of the image URL with the CDN URL was successful. Do you agree to delete the local image: ${name}?`,
-    //     `替换 cdn 地址成功，是否将本地图片 ${name} 删除?`,
-    //     { modal: true },
-    //     'Yes',
-    //     'No',
-    //   ).then(result => {
-    //     if (result === 'Yes') {
-    //       fs.unlinkSync(originalImagePath);
-    //       vscode.window.showInformationMessage(`本地图片删除成功: ${name}`);
-    //     }
-    //   });
-    // }
+    const config = vscode.workspace.getConfiguration('img2cdn');
+    const deleteLocalImage = config.get('deleteLocalImage');
+
+    if (isLocal && deleteLocalImage) {
+      vscode.window.showInformationMessage(
+        language === 'zh'
+          ? `替换 cdn 地址成功，是否将本地图片 ${name} 删除?`
+          : `The replacement of the image URL with the CDN URL was successful. Do you agree to delete the local image: ${name}?`,
+        { modal: true },
+        'Yes',
+        'No',
+      ).then(result => {
+        if (result === 'Yes') {
+          fs.unlinkSync(originalImagePath);
+          vscode.window.showInformationMessage(`本地图片删除成功: ${name}`);
+        }
+      });
+    }
   } catch (error) {
     console.error(`Failed to replace CDN URL: ${cdnUrl}`, error);
     vscode.window.showErrorMessage(language === 'zh' ? `${getBasenameFormUrl(originalImagePath)} 替换 cdn 地址失败: ${cdnUrl}` : `Failed to replace CDN URL: ${cdnUrl}`);

@@ -2,7 +2,7 @@
   "name": "img2cdn",
   "displayName": "img2cdn",
   "description": "upload image to cdn",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "icon": "./img2cdn.gif",
   "author": "hahazexia",
   "publisher": "hahazexia",
@@ -53,7 +53,12 @@
         "img2cdn.imagePathWhitelist": {
           "type": "string",
           "default": "",
-          "description": "Comma-separated string, if image url includes some string in imagePathWhitelist, there will not show upload btn"
+          "description": "Comma-separated string, if image url includes some string in imagePathWhitelist, there will not show upload btn."
+        },
+        "img2cdn.deleteLocalImage": {
+          "type": "boolean",
+          "default": false,
+          "description": "After replacing the local image, delete it."
         }
       }
     }
