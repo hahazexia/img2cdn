@@ -21331,7 +21331,7 @@ function _getFilesize() {
           _context3.prev = 0;
           fsStat = fs.statSync(source);
           _context3.next = 4;
-          return Promise.resolve().then(function () { return require('./filesize.esm-DfzJutQp.js'); });
+          return Promise.resolve().then(function () { return require('./filesize.esm-0RaO-pZg.js'); });
         case 4:
           _yield$import = _context3.sent;
           filesize = _yield$import.filesize;
@@ -21478,14 +21478,19 @@ function _upload() {
           _context6.next = 16;
           return replaceImage(data, document, range, imagePath, importRangeArr, isLocal);
         case 16:
-          _context6.next = 22;
+          _context6.next = 23;
           break;
         case 18:
           _context6.prev = 18;
           _context6.t0 = _context6["catch"](0);
           console.error("Failed to upload image: ".concat(imagePath), _context6.t0);
           vscode.window.showErrorMessage(language === 'zh' ? "\u4E0A\u4F20\u56FE\u7247\u5931\u8D25: ".concat(imagePath) : "Failed to upload image: ".concat(imagePath));
-        case 22:
+          vscode.window.showErrorMessage("".concat(JSON.stringify({
+            name: _context6.t0.name,
+            message: _context6.t0.message,
+            stack: _context6.t0.stack
+          })));
+        case 23:
         case "end":
           return _context6.stop();
       }

@@ -1,6 +1,6 @@
 'use strict';
 
-var extension = require('./extension-Dmf-ueg_.js');
+var extension = require('./extension-pZ-QLwDw.js');
 require('vscode');
 require('util');
 require('stream');
