@@ -272,6 +272,11 @@ async function upload(imagePath, document, range, importRangeArr, isLocal) {
   } catch (error) {
     console.error(`Failed to upload image: ${imagePath}`, error);
     vscode.window.showErrorMessage(language === 'zh' ? `上传图片失败: ${imagePath}` : `Failed to upload image: ${imagePath}`);
+    vscode.window.showErrorMessage(`${JSON.stringify({
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    })}`);
   }
 }
 
