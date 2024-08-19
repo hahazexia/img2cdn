@@ -14,6 +14,9 @@ This extension contributes the following settings:
 * `img2cdn.uploadApiResKey`: After the plugin sends a request to upload an image and receives a response, it will obtain the image URL according to the format of the `uploadApiResKey` field, such as `res.data.data`.
 * `img2cdn.language`: default message language, `en` or `zh`.
 * `img2cdn.imagePathWhitelist`: string array, if image url includes some string in imagePathWhitelist, there will not show upload btn.
+* `img2cdn.deleteLocalImage`: After replacing the local image, delete it.
+* `img2cdn.tinypngApiKey`: Tinypng API key to compress image.
+* `img2cdn.tinypngTimeout`: Tinypng compress image timeout.
 
 ## Release Notes
 
