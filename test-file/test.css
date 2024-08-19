@@ -5,4 +5,5 @@
     width: getPercent(322, 1280);
     z-index: 0;
     background-image: url(./elem-scene4.png);
+    background-image: url('./test.jpg');
   }

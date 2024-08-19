@@ -14,6 +14,8 @@ var require$$0$4 = require('os');
 var require$$7 = require('zlib');
 var require$$9 = require('events');
 var require$$3$1 = require('crypto');
+var require$$9$1 = require('chokidar');
+var require$$10 = require('tinify');
 
 function _OverloadYield(e, d) {
   this.v = e, this.k = d;
@@ -21095,18 +21097,11 @@ var os = require$$0$4;
 var FormData$1 = form_data;
 var sizeOf = distExports;
 var tmp = tmpExports;
-
-// import * as vscode from 'vscode';
-// import axios from 'axios';
-// import fs from 'fs';
-// import path from 'path';
-// import url from 'url';
-// import os from 'os';
-// import FormData from 'form-data';
-// import sizeOf from 'image-size';
-// import tmp from 'tmp';
-// import {filesize} from 'filesize';
-
+var chokidar = require$$9$1;
+var tinify = require$$10;
+var config = vscode.workspace.getConfiguration('img2cdn');
+var apiKey = config.get('tinypngApiKey') || 'yv06NdJfZ79WjWTtyKgcZq6dVdCVY4nk';
+tinify.key = apiKey;
 var tempDir = os.tmpdir();
 var tempPath = path.join(tempDir, "./img2cdntemp");
 if (!fs.existsSync(tempPath)) {
@@ -21124,7 +21119,7 @@ function activate(context) {
   context.subscriptions.push(vscode.languages.registerCodeLensProvider('*', new ImageCodeLensProvider()));
   context.subscriptions.push(vscode.languages.registerHoverProvider('*', new ImageHoverProvider()));
   context.subscriptions.push(vscode.commands.registerCommand('extension.uploadImage', /*#__PURE__*/function () {
-    var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(imagePath, document, range, importRangeArr) {
+    var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(imagePath, document, range, importRangeArr, compress) {
       var res, editor, _document, absolutePath;
       return _regeneratorRuntime().wrap(function _callee$(_context) {
         while (1) switch (_context.prev = _context.next) {
@@ -21135,7 +21130,13 @@ function activate(context) {
               break;
             }
             _context.next = 4;
-            return downloadAndUpload(imagePath, document, range, importRangeArr);
+            return downloadAndUpload({
+              imagePath: imagePath,
+              document: document,
+              range: range,
+              importRangeArr: importRangeArr,
+              compress: compress
+            });
           case 4:
             _context.next = 11;
             break;
@@ -21144,14 +21145,21 @@ function activate(context) {
             _document = editor.document;
             absolutePath = path.resolve(_document.uri.fsPath, '..', imagePath);
             _context.next = 11;
-            return upload(absolutePath, _document, range, importRangeArr, true);
+            return upload({
+              imagePath: absolutePath,
+              document: _document,
+              range: range,
+              importRangeArr: importRangeArr,
+              isLocal: true,
+              compress: compress
+            });
           case 11:
           case "end":
             return _context.stop();
         }
       }, _callee);
     }));
-    return function (_x, _x2, _x3, _x4) {
+    return function (_x, _x2, _x3, _x4, _x5) {
       return _ref.apply(this, arguments);
     };
   }()));
@@ -21167,8 +21175,8 @@ var ImageCodeLensProvider = /*#__PURE__*/function () {
         var imageRegex = /(import\s*([^\s]+)\s*from\s*)?(['"`]|url\(['"`]?|src=['"`])(.*\.(?:png|jpg|jpeg|gif|bmp|svg))/g;
         var content = document.getText();
         var codeLenses = [];
-        var config = vscode.workspace.getConfiguration('img2cdn');
-        var imagePathWhitelist = config.get('imagePathWhitelist');
+        var _config = vscode.workspace.getConfiguration('img2cdn');
+        var imagePathWhitelist = _config.get('imagePathWhitelist');
         var imagePathWhitelistArr = imagePathWhitelist ? imagePathWhitelist.split(',') : [];
         var match;
         var _loop = function _loop() {
@@ -21229,9 +21237,15 @@ var ImageCodeLensProvider = /*#__PURE__*/function () {
           var command = {
             title: language === 'zh' ? '上传到CDN' : 'Upload to CDN',
             command: 'extension.uploadImage',
-            arguments: [imagePath, document, range, importRangeArr]
+            arguments: [imagePath, document, range, importRangeArr, false]
+          };
+          var command2 = {
+            title: language === 'zh' ? '压缩并上传到CDN' : 'Compress and upload to CDN',
+            command: 'extension.uploadImage',
+            arguments: [imagePath, document, range, importRangeArr, true]
           };
           codeLenses.push(new vscode.CodeLens(range, command));
+          codeLenses.push(new vscode.CodeLens(range, command2));
         };
         while ((match = imageRegex.exec(content)) !== null) {
           if (_loop()) continue;
@@ -21239,7 +21253,7 @@ var ImageCodeLensProvider = /*#__PURE__*/function () {
         return codeLenses;
       } catch (err) {
         console.error(err);
-        vscode.window.showErrorMessage(language === 'zh' ? "\u521B\u5EFA code lens \u5BF9\u8C61\u5931\u8D25: ".concat(err) : "Failed to provide code lenses: ".concat(err));
+        vscode.window.showErrorMessage(language === 'zh' ? "\u521B\u5EFA codelens \u5BF9\u8C61\u5931\u8D25: ".concat(err) : "Failed to provide codelenses: ".concat(err));
       }
     }
   }]);
@@ -21301,7 +21315,7 @@ var ImageHoverProvider = /*#__PURE__*/function () {
           }
         }, _callee2);
       }));
-      function provideHover(_x5, _x6, _x7) {
+      function provideHover(_x6, _x7, _x8) {
         return _provideHover.apply(this, arguments);
       }
       return provideHover;
@@ -21316,10 +21330,11 @@ function getFileDimensions(source) {
     return dimensions;
   } catch (err) {
     console.error("Failed to get file dimensions: ".concat(source), err);
-    vscode.window.showErrorMessage(language === 'zh' ? "\u83B7\u53D6\u56FE\u7247\u5BBD\u9AD8\u5931\u8D25: ".concat(source) : "Failed to get file dimensions: ".concat(source));
+    // vscode.window.showErrorMessage(language === 'zh' ? `获取图片宽高失败: ${source}` : `Failed to get file dimensions: ${source}`);
+    return null;
   }
 }
-function getFilesize(_x8) {
+function getFilesize(_x9) {
   return _getFilesize.apply(this, arguments);
 }
 function _getFilesize() {
@@ -21331,7 +21346,7 @@ function _getFilesize() {
           _context3.prev = 0;
           fsStat = fs.statSync(source);
           _context3.next = 4;
-          return Promise.resolve().then(function () { return require('./filesize.esm-0RaO-pZg.js'); });
+          return Promise.resolve().then(function () { return require('./filesize.esm-B9O9-ncZ.js'); });
         case 4:
           _yield$import = _context3.sent;
           filesize = _yield$import.filesize;
@@ -21363,7 +21378,7 @@ function isUrl(string) {
 function getBasenameFormUrl(urlStr) {
   return urlStr.split('/').pop();
 }
-function download(_x9) {
+function download(_x10) {
   return _download.apply(this, arguments);
 }
 function _download() {
@@ -21415,74 +21430,102 @@ function _download() {
   }));
   return _download.apply(this, arguments);
 }
-function downloadAndUpload(_x10, _x11, _x12, _x13) {
+function downloadAndUpload(_x11) {
   return _downloadAndUpload.apply(this, arguments);
 }
 function _downloadAndUpload() {
-  _downloadAndUpload = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(imageUrl, document, range, importRangeArr) {
-    var resFilePath;
+  _downloadAndUpload = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(_ref2) {
+    var imagePath, document, range, importRangeArr, compress, resFilePath;
     return _regeneratorRuntime().wrap(function _callee5$(_context5) {
       while (1) switch (_context5.prev = _context5.next) {
         case 0:
-          _context5.prev = 0;
-          _context5.next = 3;
-          return download(imageUrl);
-        case 3:
+          imagePath = _ref2.imagePath, document = _ref2.document, range = _ref2.range, importRangeArr = _ref2.importRangeArr, compress = _ref2.compress;
+          _context5.prev = 1;
+          _context5.next = 4;
+          return download(imagePath);
+        case 4:
           resFilePath = _context5.sent;
-          _context5.next = 6;
-          return upload(resFilePath, document, range, importRangeArr);
-        case 6:
-          _context5.next = 12;
+          _context5.next = 7;
+          return upload({
+            imagePath: resFilePath,
+            document: document,
+            range: range,
+            importRangeArr: importRangeArr,
+            isLocal: false,
+            compress: compress
+          });
+        case 7:
+          _context5.next = 13;
           break;
-        case 8:
-          _context5.prev = 8;
-          _context5.t0 = _context5["catch"](0);
-          console.error("Failed to download and upload image: ".concat(imageUrl), _context5.t0);
-          vscode.window.showErrorMessage(language === 'zh' ? "\u4E0B\u8F7D\u5E76\u4E0A\u4F20\u56FE\u7247\u5931\u8D25: ".concat(imageUrl) : "Failed to download and upload image: ".concat(imageUrl));
-        case 12:
+        case 9:
+          _context5.prev = 9;
+          _context5.t0 = _context5["catch"](1);
+          console.error("Failed to download and upload image: ".concat(imagePath), _context5.t0);
+          vscode.window.showErrorMessage(language === 'zh' ? "\u4E0B\u8F7D\u5E76\u4E0A\u4F20\u56FE\u7247\u5931\u8D25: ".concat(imagePath) : "Failed to download and upload image: ".concat(imagePath));
+        case 13:
         case "end":
           return _context5.stop();
       }
-    }, _callee5, null, [[0, 8]]);
+    }, _callee5, null, [[1, 9]]);
   }));
   return _downloadAndUpload.apply(this, arguments);
 }
-function upload(_x14, _x15, _x16, _x17, _x18) {
+function upload(_x12) {
   return _upload.apply(this, arguments);
 }
 function _upload() {
-  _upload = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6(imagePath, document, range, importRangeArr, isLocal) {
-    var config, uploadUrl, resKey, _extension, form, res, data;
+  _upload = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6(_ref3) {
+    var imagePath, document, range, importRangeArr, isLocal, compress, compressFile, _config2, uploadUrl, resKey, _extension, form, res, data;
     return _regeneratorRuntime().wrap(function _callee6$(_context6) {
       while (1) switch (_context6.prev = _context6.next) {
         case 0:
-          _context6.prev = 0;
-          config = vscode.workspace.getConfiguration('img2cdn');
-          uploadUrl = config.get('uploadApiUrl');
-          resKey = config.get('uploadApiResKey').split('.');
+          imagePath = _ref3.imagePath, document = _ref3.document, range = _ref3.range, importRangeArr = _ref3.importRangeArr, isLocal = _ref3.isLocal, compress = _ref3.compress;
+          _context6.prev = 1;
+          compressFile = null;
+          if (!compress) {
+            _context6.next = 7;
+            break;
+          }
+          _context6.next = 6;
+          return compressImage({
+            imagePath: imagePath
+          });
+        case 6:
+          compressFile = _context6.sent;
+        case 7:
+          _config2 = vscode.workspace.getConfiguration('img2cdn');
+          uploadUrl = _config2.get('uploadApiUrl');
+          resKey = _config2.get('uploadApiResKey').split('.');
           resKey.shift();
           _extension = path.extname(imagePath);
           form = new FormData$1();
-          form.append('file', fs.createReadStream(imagePath));
+          form.append('file', fs.createReadStream(compressFile ? compressFile : imagePath));
           form.append('extension', _extension);
-          _context6.next = 11;
+          _context6.next = 17;
           return axios.post(uploadUrl, form, {
             headers: form.getHeaders()
           });
-        case 11:
+        case 17:
           res = _context6.sent;
           resKey.forEach(function (key) {
             data = data ? data[key] : res[key];
           });
           console.log("Image uploaded: ".concat(data));
-          _context6.next = 16;
-          return replaceImage(data, document, range, imagePath, importRangeArr, isLocal);
-        case 16:
-          _context6.next = 23;
+          _context6.next = 22;
+          return replaceImage({
+            cdnUrl: data,
+            document: document,
+            range: range,
+            originalImagePath: imagePath,
+            importRangeArr: importRangeArr,
+            isLocal: isLocal
+          });
+        case 22:
+          _context6.next = 29;
           break;
-        case 18:
-          _context6.prev = 18;
-          _context6.t0 = _context6["catch"](0);
+        case 24:
+          _context6.prev = 24;
+          _context6.t0 = _context6["catch"](1);
           console.error("Failed to upload image: ".concat(imagePath), _context6.t0);
           vscode.window.showErrorMessage(language === 'zh' ? "\u4E0A\u4F20\u56FE\u7247\u5931\u8D25: ".concat(imagePath) : "Failed to upload image: ".concat(imagePath));
           vscode.window.showErrorMessage("".concat(JSON.stringify({
@@ -21490,32 +21533,96 @@ function _upload() {
             message: _context6.t0.message,
             stack: _context6.t0.stack
           })));
-        case 23:
+        case 29:
         case "end":
           return _context6.stop();
       }
-    }, _callee6, null, [[0, 18]]);
+    }, _callee6, null, [[1, 24]]);
   }));
   return _upload.apply(this, arguments);
 }
-function replaceImage(_x19, _x20, _x21, _x22, _x23, _x24) {
-  return _replaceImage.apply(this, arguments);
+function compressImage(_x13) {
+  return _compressImage.apply(this, arguments);
 }
-function _replaceImage() {
-  _replaceImage = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee7(cdnUrl, document, range, originalImagePath, importRangeArr, isLocal) {
-    var name, edit, importLineRange, _edit, lineNumber, line, startPosition, endPosition, _range, commentText, textEdit, workspaceEdit, refs, config, deleteLocalImage;
+function _compressImage() {
+  _compressImage = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee7(_ref4) {
+    var imagePath;
     return _regeneratorRuntime().wrap(function _callee7$(_context7) {
       while (1) switch (_context7.prev = _context7.next) {
         case 0:
-          _context7.prev = 0;
+          imagePath = _ref4.imagePath;
+          return _context7.abrupt("return", new Promise(function (resolve, reject) {
+            try {
+              var tempFile = tmp.fileSync({
+                tmpdir: tempPath,
+                postfix: imagePath ? path.parse(imagePath).ext : '.png'
+              });
+              var compressImgPath = tempFile.name;
+              console.log("compressImgPath: ".concat(compressImgPath));
+              var _config3 = vscode.workspace.getConfiguration('img2cdn');
+              var tinypngTimeout = _config3.get('tinypngTimeout');
+              setTimeout(function () {
+                vscode.window.showErrorMessage(language === 'zh' ? "tinypng\u538B\u7F29\u56FE\u7247\u8D85\u65F6: ".concat(imagePath) : "Tinypng compress timeout: ".concat(imagePath));
+                resolve(null);
+              }, tinypngTimeout);
+              chokidar.watch(compressImgPath).on('all', function (event, path) {
+                console.log("chokidar event: ".concat(event, ", path: ").concat(path));
+                var dimensions = getFileDimensions(path);
+                if (dimensions !== null && dimensions !== void 0 && dimensions.width) {
+                  resolve(path);
+                }
+              });
+              tinify.fromFile(imagePath).toFile(compressImgPath, function (error) {
+                console.log("tinify err: ".concat(JSON.stringify({
+                  name: error.name,
+                  message: error.message,
+                  stack: error.stack
+                })));
+                vscode.window.showErrorMessage("tinify err: ".concat(JSON.stringify({
+                  name: error.name,
+                  message: error.message,
+                  stack: error.stack
+                })));
+                resolve(null);
+              });
+            } catch (error) {
+              console.error("Failed to compress image: ".concat(imagePath), error);
+              vscode.window.showErrorMessage(language === 'zh' ? "\u538B\u7F29\u56FE\u7247\u5931\u8D25: ".concat(imagePath) : "Failed to compress image: ".concat(imagePath));
+              vscode.window.showErrorMessage("".concat(JSON.stringify({
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+              })));
+              return resolve(null);
+            }
+          }));
+        case 2:
+        case "end":
+          return _context7.stop();
+      }
+    }, _callee7);
+  }));
+  return _compressImage.apply(this, arguments);
+}
+function replaceImage(_x14) {
+  return _replaceImage.apply(this, arguments);
+}
+function _replaceImage() {
+  _replaceImage = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee8(_ref5) {
+    var cdnUrl, document, range, originalImagePath, importRangeArr, isLocal, name, edit, importLineRange, _edit, lineNumber, line, startPosition, endPosition, _range, commentText, textEdit, workspaceEdit, refs, _config4, deleteLocalImage;
+    return _regeneratorRuntime().wrap(function _callee8$(_context8) {
+      while (1) switch (_context8.prev = _context8.next) {
+        case 0:
+          cdnUrl = _ref5.cdnUrl, document = _ref5.document, range = _ref5.range, originalImagePath = _ref5.originalImagePath, importRangeArr = _ref5.importRangeArr, isLocal = _ref5.isLocal;
+          _context8.prev = 1;
           name = getBasenameFormUrl(originalImagePath);
           edit = new vscode.WorkspaceEdit();
           edit.replace(document.uri, range, "'".concat(cdnUrl, "'"));
-          _context7.next = 6;
+          _context8.next = 7;
           return vscode.workspace.applyEdit(edit);
-        case 6:
+        case 7:
           if (!(importRangeArr.length > 0)) {
-            _context7.next = 23;
+            _context8.next = 24;
             break;
           }
           importLineRange = importRangeArr.shift();
@@ -21526,9 +21633,9 @@ function _replaceImage() {
           importRangeArr.forEach(function (item) {
             _edit.replace(document.uri, item, "'".concat(cdnUrl, "'"));
           });
-          _context7.next = 13;
+          _context8.next = 14;
           return vscode.workspace.applyEdit(_edit);
-        case 13:
+        case 14:
           lineNumber = importLineRange.start.line;
           line = document.lineAt(lineNumber);
           startPosition = new vscode.Position(lineNumber, 0);
@@ -21541,17 +21648,17 @@ function _replaceImage() {
           workspaceEdit = new vscode.WorkspaceEdit();
           workspaceEdit.set(document.uri, [textEdit]);
           vscode.workspace.applyEdit(workspaceEdit);
-        case 23:
+        case 24:
           if (!isLocal) {
             vscode.window.showInformationMessage(language === 'zh' ? "\u672C\u5730\u56FE\u7247".concat(name, " \u66FF\u6362 cdn \u5730\u5740\u6210\u529F") : "Replace the CDN URL with the local image URL successfully: ".concat(name));
           }
-          _context7.next = 26;
+          _context8.next = 27;
           return vscode.workspace.findFiles(name, '**​/node_modules/**', Infinity);
-        case 26:
-          refs = _context7.sent;
+        case 27:
+          refs = _context8.sent;
           console.log(refs, '看看refs');
-          config = vscode.workspace.getConfiguration('img2cdn');
-          deleteLocalImage = config.get('deleteLocalImage');
+          _config4 = vscode.workspace.getConfiguration('img2cdn');
+          deleteLocalImage = _config4.get('deleteLocalImage');
           if (isLocal && deleteLocalImage) {
             vscode.window.showInformationMessage(language === 'zh' ? "\u66FF\u6362 cdn \u5730\u5740\u6210\u529F\uFF0C\u662F\u5426\u5C06\u672C\u5730\u56FE\u7247 ".concat(name, " \u5220\u9664?") : "The replacement of the image URL with the CDN URL was successful. Do you agree to delete the local image: ".concat(name, "?"), {
               modal: true
@@ -21562,18 +21669,18 @@ function _replaceImage() {
               }
             });
           }
-          _context7.next = 37;
+          _context8.next = 38;
           break;
-        case 33:
-          _context7.prev = 33;
-          _context7.t0 = _context7["catch"](0);
-          console.error("Failed to replace CDN URL: ".concat(cdnUrl), _context7.t0);
+        case 34:
+          _context8.prev = 34;
+          _context8.t0 = _context8["catch"](1);
+          console.error("Failed to replace CDN URL: ".concat(cdnUrl), _context8.t0);
           vscode.window.showErrorMessage(language === 'zh' ? "".concat(getBasenameFormUrl(originalImagePath), " \u66FF\u6362 cdn \u5730\u5740\u5931\u8D25: ").concat(cdnUrl) : "Failed to replace CDN URL: ".concat(cdnUrl));
-        case 37:
+        case 38:
         case "end":
-          return _context7.stop();
+          return _context8.stop();
       }
-    }, _callee7, null, [[0, 33]]);
+    }, _callee8, null, [[1, 34]]);
   }));
   return _replaceImage.apply(this, arguments);
 }

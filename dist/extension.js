@@ -1,6 +1,6 @@
 'use strict';
 
-var extension = require('./extension-pZ-QLwDw.js');
+var extension = require('./extension-Dw5EpLaP.js');
 require('vscode');
 require('util');
 require('stream');
@@ -15,6 +15,8 @@ require('os');
 require('zlib');
 require('events');
 require('crypto');
+require('chokidar');
+require('tinify');
 
 
 

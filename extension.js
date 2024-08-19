@@ -7,17 +7,12 @@ const os = require('os');
 const FormData = require('form-data');
 const sizeOf = require('image-size');
 const tmp = require('tmp');
+const chokidar = require('chokidar');
 
-// import * as vscode from 'vscode';
-// import axios from 'axios';
-// import fs from 'fs';
-// import path from 'path';
-// import url from 'url';
-// import os from 'os';
-// import FormData from 'form-data';
-// import sizeOf from 'image-size';
-// import tmp from 'tmp';
-// import {filesize} from 'filesize';
+const tinify = require("tinify");
+const config = vscode.workspace.getConfiguration('img2cdn');
+const apiKey = config.get('tinypngApiKey') || 'yv06NdJfZ79WjWTtyKgcZq6dVdCVY4nk';
+tinify.key = apiKey;
 
 const tempDir = os.tmpdir();
 const tempPath = path.join(tempDir, `./img2cdntemp`);
@@ -41,15 +36,28 @@ function activate(context) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('extension.uploadImage', async (imagePath, document, range, importRangeArr) => {
+    vscode.commands.registerCommand('extension.uploadImage', async (imagePath, document, range, importRangeArr, compress) => {
       const res = isUrl(imagePath);
       if (res) {
-        await downloadAndUpload(imagePath, document, range, importRangeArr);
+        await downloadAndUpload({
+          imagePath,
+          document,
+          range,
+          importRangeArr,
+          compress,
+        });
       } else {
         const editor = vscode.window.activeTextEditor;
         const document = editor.document;
         const absolutePath = path.resolve(document.uri.fsPath, '..', imagePath);
-        await upload(absolutePath, document, range, importRangeArr, true);
+        await upload({
+          imagePath: absolutePath,
+          document,
+          range,
+          importRangeArr,
+          isLocal: true,
+          compress,
+        });
       }
     })
   );
@@ -120,20 +128,26 @@ class ImageCodeLensProvider {
 
         const range = new vscode.Range(
           document.positionAt(start),
-          document.positionAt(end)
+          document.positionAt(end),
         );
         const command = {
           title: language === 'zh' ? '上传到CDN' : 'Upload to CDN',
           command: 'extension.uploadImage',
-          arguments: [imagePath, document, range, importRangeArr],
+          arguments: [imagePath, document, range, importRangeArr, false],
+        };
+        const command2 = {
+          title: language === 'zh' ? '压缩并上传到CDN' : 'Compress and upload to CDN',
+          command: 'extension.uploadImage',
+          arguments: [imagePath, document, range, importRangeArr, true],
         };
         codeLenses.push(new vscode.CodeLens(range, command));
+        codeLenses.push(new vscode.CodeLens(range, command2));
       }
   
       return codeLenses;
     } catch (err) {
       console.error(err);
-      vscode.window.showErrorMessage(language === 'zh' ? `创建 code lens 对象失败: ${err}` : `Failed to provide code lenses: ${err}`);
+      vscode.window.showErrorMessage(language === 'zh' ? `创建 codelens 对象失败: ${err}` : `Failed to provide codelenses: ${err}`);
     }
   }
 }
@@ -174,7 +188,8 @@ function getFileDimensions (source) {
     return dimensions;
   } catch (err) {
     console.error(`Failed to get file dimensions: ${source}`, err);
-    vscode.window.showErrorMessage(language === 'zh' ? `获取图片宽高失败: ${source}` : `Failed to get file dimensions: ${source}`);
+    // vscode.window.showErrorMessage(language === 'zh' ? `获取图片宽高失败: ${source}` : `Failed to get file dimensions: ${source}`);
+    return null;
   }
 }
 
@@ -235,19 +250,45 @@ async function download(imageUrl) {
   }
 }
 
-async function downloadAndUpload(imageUrl, document, range, importRangeArr) {
+async function downloadAndUpload({
+  imagePath,
+  document,
+  range,
+  importRangeArr,
+  compress,
+}) {
   try {
-    const resFilePath = await download(imageUrl);
+    const resFilePath = await download(imagePath);
 
-    await upload(resFilePath, document, range, importRangeArr);
+    await upload({
+      imagePath: resFilePath,
+      document,
+      range,
+      importRangeArr,
+      isLocal: false,
+      compress,
+    });
   } catch (error) {
-    console.error(`Failed to download and upload image: ${imageUrl}`, error);
-    vscode.window.showErrorMessage(language === 'zh' ? `下载并上传图片失败: ${imageUrl}` : `Failed to download and upload image: ${imageUrl}`);
+    console.error(`Failed to download and upload image: ${imagePath}`, error);
+    vscode.window.showErrorMessage(language === 'zh' ? `下载并上传图片失败: ${imagePath}` : `Failed to download and upload image: ${imagePath}`);
   }
 }
 
-async function upload(imagePath, document, range, importRangeArr, isLocal) {
+async function upload({
+  imagePath,
+  document,
+  range,
+  importRangeArr,
+  isLocal,
+  compress,
+}) {
   try {
+    let compressFile = null;
+    if (compress) {
+      compressFile = await compressImage({
+        imagePath,
+      });
+    }
     const config = vscode.workspace.getConfiguration('img2cdn');
     const uploadUrl = config.get('uploadApiUrl');
     const resKey = config.get('uploadApiResKey').split('.');
@@ -255,7 +296,7 @@ async function upload(imagePath, document, range, importRangeArr, isLocal) {
 
     const extension = path.extname(imagePath);
     const form = new FormData();
-    form.append('file', fs.createReadStream(imagePath));
+    form.append('file', fs.createReadStream(compressFile ? compressFile : imagePath));
     form.append('extension', extension);
 
     const res = await axios.post(uploadUrl, form, {
@@ -268,7 +309,14 @@ async function upload(imagePath, document, range, importRangeArr, isLocal) {
 
     console.log(`Image uploaded: ${data}`);
 
-    await replaceImage(data, document, range, imagePath, importRangeArr, isLocal);
+    await replaceImage({
+      cdnUrl: data,
+      document,
+      range,
+      originalImagePath: imagePath,
+      importRangeArr,
+      isLocal,
+    });
   } catch (error) {
     console.error(`Failed to upload image: ${imagePath}`, error);
     vscode.window.showErrorMessage(language === 'zh' ? `上传图片失败: ${imagePath}` : `Failed to upload image: ${imagePath}`);
@@ -280,7 +328,69 @@ async function upload(imagePath, document, range, importRangeArr, isLocal) {
   }
 }
 
-async function replaceImage(cdnUrl, document, range, originalImagePath, importRangeArr, isLocal) {
+async function compressImage({
+  imagePath,
+}) {
+  return new Promise((resolve, reject) => {
+
+    try {
+      const tempFile = tmp.fileSync({
+        tmpdir: tempPath,
+        postfix: imagePath ? path.parse(imagePath).ext : '.png',
+      });
+      const compressImgPath = tempFile.name;
+      console.log(`compressImgPath: ${compressImgPath}`);
+
+
+      const config = vscode.workspace.getConfiguration('img2cdn');
+      const tinypngTimeout = config.get('tinypngTimeout')
+      setTimeout(() => {
+        vscode.window.showErrorMessage(language === 'zh' ? `tinypng压缩图片超时: ${imagePath}` : `Tinypng compress timeout: ${imagePath}`);
+        resolve(null);
+      }, tinypngTimeout);
+
+      chokidar.watch(compressImgPath).on('all', (event, path) => {
+        console.log(`chokidar event: ${event}, path: ${path}`);
+        const dimensions = getFileDimensions(path);
+        if (dimensions?.width) {
+          resolve(path);
+        }
+      });
+
+      tinify.fromFile(imagePath).toFile(compressImgPath, (error) => {
+        console.log(`tinify err: ${JSON.stringify({
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        })}`);
+        vscode.window.showErrorMessage(`tinify err: ${JSON.stringify({
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        })}`);
+        resolve(null)
+      });
+    } catch(error) {
+      console.error(`Failed to compress image: ${imagePath}`, error);
+      vscode.window.showErrorMessage(language === 'zh' ? `压缩图片失败: ${imagePath}` : `Failed to compress image: ${imagePath}`);
+      vscode.window.showErrorMessage(`${JSON.stringify({
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      })}`);
+      return resolve(null);
+    }
+  });
+}
+
+async function replaceImage({
+  cdnUrl,
+  document,
+  range,
+  originalImagePath,
+  importRangeArr,
+  isLocal,
+}) {
   try {
     const name = getBasenameFormUrl(originalImagePath);
     const edit = new vscode.WorkspaceEdit();

@@ -2,7 +2,7 @@
   "name": "img2cdn",
   "displayName": "img2cdn",
   "description": "upload image to cdn",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "icon": "./img2cdn.gif",
   "author": "hahazexia",
   "publisher": "hahazexia",
@@ -33,7 +33,7 @@
       }
     ],
     "configuration": {
-      "title": "img2cdn Configuration",
+      "title": "img2cdn",
       "properties": {
         "img2cdn.uploadApiUrl": {
           "type": "string",
@@ -59,6 +59,16 @@
           "type": "boolean",
           "default": false,
           "description": "After replacing the local image, delete it."
+        },
+        "img2cdn.tinypngApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Tinypng API key to compress image."
+        },
+        "img2cdn.tinypngTimeout": {
+          "type": "number",
+          "default": 10000,
+          "description": "Tinypng compress image timeout."
         }
       }
     }
@@ -87,11 +97,14 @@
     "@babel/preset-env": "^7.25.0",
     "@rollup/plugin-babel": "^6.0.4",
     "axios": "^1.7.2",
+    "chokidar": "^3.6.0",
     "esm": "^3.2.25",
     "filesize": "^10.1.4",
     "image-size": "^1.1.1",
     "js-base64": "^3.7.7",
     "rollup": "^4.19.1",
+    "rollup-plugin-copy": "^3.5.0",
+    "tinify": "^1.7.1",
     "tmp": "^0.2.3"
   }
 }
