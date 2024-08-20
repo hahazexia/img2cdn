@@ -283,39 +283,62 @@ async function upload({
   compress,
 }) {
   try {
-    let compressFile = null;
-    if (compress) {
-      compressFile = await compressImage({
-        imagePath,
+    vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: language === 'zh' ? '正在上传图片' : 'Uploading image',
+      cancellable: true
+    }, async (progress, token) => {
+      token.onCancellationRequested(() => {
+        console.log("User canceled the long running operation");
       });
-    }
-    const config = vscode.workspace.getConfiguration('img2cdn');
-    const uploadUrl = config.get('uploadApiUrl');
-    const resKey = config.get('uploadApiResKey').split('.');
-    resKey.shift();
 
-    const extension = path.extname(imagePath);
-    const form = new FormData();
-    form.append('file', fs.createReadStream(compressFile ? compressFile : imagePath));
-    form.append('extension', extension);
+      progress.report({ increment: 0, message: language === 'zh' ? '上传中...' : 'Uploading...' });
 
-    const res = await axios.post(uploadUrl, form, {
-      headers: form.getHeaders()
-    });
-    let data;
-    resKey.forEach((key) => {
-      data = data ? data[key] : res[key];
-    });
+      let compressFile = null;
+      if (compress) {
+        compressFile = await compressImage({
+          imagePath,
+        });
+      }
 
-    console.log(`Image uploaded: ${data}`);
+      progress.report({ increment: 50, message: language === 'zh' ? '上传中...' : 'Uploading...' });
 
-    await replaceImage({
-      cdnUrl: data,
-      document,
-      range,
-      originalImagePath: imagePath,
-      importRangeArr,
-      isLocal,
+      const config = vscode.workspace.getConfiguration('img2cdn');
+      const uploadUrl = config.get('uploadApiUrl');
+      const resKey = config.get('uploadApiResKey').split('.');
+      resKey.shift();
+
+      const extension = path.extname(imagePath);
+      const form = new FormData();
+      form.append('file', fs.createReadStream(compressFile ? compressFile : imagePath));
+      form.append('extension', extension);
+
+      const res = await axios.post(uploadUrl, form, {
+        headers: form.getHeaders()
+      });
+      let data;
+      resKey.forEach((key) => {
+        data = data ? data[key] : res[key];
+      });
+      progress.report({ increment: 80, message: language === 'zh' ? '上传中，快好了...' : 'Uploading, almost there...' });
+      console.log(`Image uploaded: ${data}`);
+
+      await replaceImage({
+        cdnUrl: data,
+        document,
+        range,
+        originalImagePath: imagePath,
+        importRangeArr,
+        isLocal,
+      });
+
+      const p = new Promise(resolve => {
+        setTimeout(() => {
+          resolve();
+        }, 200);
+      });
+
+      return p;
     });
   } catch (error) {
     console.error(`Failed to upload image: ${imagePath}`, error);
@@ -344,7 +367,7 @@ async function compressImage({
 
       const config = vscode.workspace.getConfiguration('img2cdn');
       const tinypngTimeout = config.get('tinypngTimeout')
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         vscode.window.showErrorMessage(language === 'zh' ? `tinypng压缩图片超时: ${imagePath}` : `Tinypng compress timeout: ${imagePath}`);
         resolve(null);
       }, tinypngTimeout);
@@ -353,6 +376,7 @@ async function compressImage({
         console.log(`chokidar event: ${event}, path: ${path}`);
         const dimensions = getFileDimensions(path);
         if (dimensions?.width) {
+          clearTimeout(timeout);
           resolve(path);
         }
       });
@@ -368,6 +392,7 @@ async function compressImage({
           message: error.message,
           stack: error.stack
         })}`);
+        clearTimeout(timeout);
         resolve(null)
       });
     } catch(error) {
