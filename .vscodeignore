@@ -12,3 +12,4 @@ test-file/**
 node_modules
 *.lock
 *.yarnrc
+panel-webview/**

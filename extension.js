@@ -18,16 +18,20 @@ const tempDir = os.tmpdir();
 const tempPath = path.join(tempDir, `./img2cdntemp`);
 if (!fs.existsSync(tempPath)) {
   fs.mkdirSync(tempPath, { recursive: true });
-}``
+} ``
 
 const imageCache = new Map();
 tmp.setGracefulCleanup();
 
 let language = 'en'; // en zh
+let format = 'png|jpg|jpeg|gif|bmp|svg';
 
 function activate(context) {
   const config = vscode.workspace.getConfiguration('img2cdn');
   language = config.get('language');
+  format = config.get('format');
+  const resourceRoot = vscode.Uri.joinPath(context.extensionUri, 'dist');
+
   context.subscriptions.push(
     vscode.languages.registerCodeLensProvider('*', new ImageCodeLensProvider())
   );
@@ -59,14 +63,100 @@ function activate(context) {
           compress,
         });
       }
-    })
+    }),
   );
+  context.subscriptions.push(vscode.commands.registerCommand('extension.img2cdn', async (uri) => {
+    console.log(uri, 'uri');
+    const filePath = uri.fsPath;
+    console.log(`filePath: ${filePath}`);
+    const imgExtReg = new RegExp(`\\.(${format})$`, 'g');
+    const isImgFile = imgExtReg.test(filePath);
+    let resImg = [];
+
+    if (isImgFile) {
+      const imgUrl = await uploadImgFromLocal(filePath);
+      const size = await getFilesize(filePath);
+      console.log(imgUrl, '看看 imgUrl');
+      resImg = [
+        {
+          local: filePath,
+          url: imgUrl,
+          size,
+        },
+      ];
+    } else {
+      const files = await fs.promises.readdir(filePath);
+      const fileArray = files.map(file => path.join(filePath, file));
+      resImg = await uploadImgFromLocalMulti(fileArray);
+    }
+
+    const panel = vscode.window.createWebviewPanel(
+      'img2cdn',
+      'img2cdn',
+      vscode.ViewColumn.One,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+      }
+    );
+    let html = fs.readFileSync(path.resolve(__dirname, './index.html'), {
+      encoding: 'utf-8',
+    });
+    const webviewResourceRoot = panel.webview.asWebviewUri(resourceRoot);
+    html = html.replace(/\/VSCODE_WEBVIEW_BASE/g, webviewResourceRoot.toString());
+
+    panel.webview.html = html;
+    panel.webview.postMessage({
+      command: 'img',
+      data: {
+        img: resImg.map(i => ({
+          ...i,
+          webviewUrl: handleWebviewImagesUri(i.local, panel)
+        })),
+      },
+    });
+
+    panel.webview.onDidReceiveMessage(
+      message => {
+        try {
+          switch (message.command) {
+            case 'openFile':
+              openFile(JSON.parse(message.data));
+              break;
+            case 'copySuccess':
+              vscode.window.showInformationMessage(language === 'zh' ? `图片 url 复制成功！` : `image url copy success!`);
+              break;
+          }
+        } catch (err) {
+          console.log(err, 'onDidReceiveMessage err');
+        }
+
+      },
+      undefined,
+      context.subscriptions
+    );
+  }));
+}
+
+function handleWebviewImagesUri(imgPath, panel) {
+  const imageUri = vscode.Uri.file(imgPath);
+  const webviewImageUri = panel.webview.asWebviewUri(imageUri).toString();
+  return webviewImageUri;
+}
+
+async function openFile(filePath) {
+  try {
+    const fileUri = vscode.Uri.file(filePath);
+    await vscode.commands.executeCommand('vscode.open', fileUri);
+  } catch (error) {
+    vscode.window.showErrorMessage(`Error opening file: ${error.message}`);
+  }
 }
 
 class ImageCodeLensProvider {
   provideCodeLenses(document, token) {
     try {
-      const imageRegex = /(import\s*([^\s]+)\s*from\s*)?(['"`]|url\(['"`]?|src=['"`])(.*\.(?:png|jpg|jpeg|gif|bmp|svg))/g;
+      const imageRegex = new RegExp(`(import\\s*([^\\s]+)\\s*from\\s*)?(['"\`]|url\\(['"\`]?|src=['"\`])(.*\\.(?:${format}))`, 'g');
       const content = document.getText();
       const codeLenses = [];
 
@@ -86,31 +176,31 @@ class ImageCodeLensProvider {
         const isSrc = prefix.startsWith('src');
         const isUrlSrcQuotation = (isUrl || isSrc) && (prefix.endsWith('"') || prefix.endsWith("'") || prefix.endsWith('`'));
         const isImport = Boolean(importModuleName);
-        
+
         let start = match.index;
         let end = match.index + imagePath.length;
-  
+
         if (isQuotation) {
-            end += 2;
+          end += 2;
         }
         if (isUrl) {
-            start += 4;
-            if (isUrlSrcQuotation) {
-                end += (4 + 2);
-            } else {
-                end += (4);
-            }
+          start += 4;
+          if (isUrlSrcQuotation) {
+            end += (4 + 2);
+          } else {
+            end += (4);
+          }
         }
         if (isSrc) {
-            start += 4;
-            end += (4 + 2);
+          start += 4;
+          end += (4 + 2);
         }
         if (isImport) {
           start += importPrefix.length;
           end += importPrefix.length;
         }
 
-  
+
         let importRangeArr = [];
         if (isImport) {
           let importModuleMatch = new RegExp(`[^a-zA-Z$_0-9]${importModuleName}(?=[\\s;.,(){}[\\]])`, 'g');
@@ -143,7 +233,7 @@ class ImageCodeLensProvider {
         codeLenses.push(new vscode.CodeLens(range, command));
         codeLenses.push(new vscode.CodeLens(range, command2));
       }
-  
+
       return codeLenses;
     } catch (err) {
       console.error(err);
@@ -154,7 +244,7 @@ class ImageCodeLensProvider {
 
 class ImageHoverProvider {
   async provideHover(document, position, token) {
-    const imageRegex = /(import\s*([^\s]+)\s*from\s*)?(['"`]|url\(['"`]?|src=['"`])(.*\.(?:png|jpg|jpeg|gif|bmp|svg))/g;
+    const imageRegex = new RegExp(`(import\\s*([^\\s]+)\\s*from\\s*)?(['"\`]|url\\(['"\`]?|src=['"\`])(.*\\.(?:${format}))`, 'g');
     const range = document.getWordRangeAtPosition(position, imageRegex);
 
     if (range) {
@@ -180,7 +270,7 @@ class ImageHoverProvider {
   }
 }
 
-function getFileDimensions (source) {
+function getFileDimensions(source) {
   try {
     console.log(source, 'source 看看');
     const dimensions = sizeOf(source);
@@ -213,7 +303,7 @@ function isUrl(string) {
     return false;
   }
 }
-function getBasenameFormUrl(urlStr)  {
+function getBasenameFormUrl(urlStr) {
   return urlStr.split('/').pop();
 }
 
@@ -272,6 +362,171 @@ async function downloadAndUpload({
     console.error(`Failed to download and upload image: ${imagePath}`, error);
     vscode.window.showErrorMessage(language === 'zh' ? `下载并上传图片失败: ${imagePath}` : `Failed to download and upload image: ${imagePath}`);
   }
+}
+
+async function uploadImgNoProgress(imgPath) {
+  return new Promise(async (resolve) => {
+    try {
+      const config = vscode.workspace.getConfiguration('img2cdn');
+      const uploadUrl = config.get('uploadApiUrl');
+      const resKey = config.get('uploadApiResKey').split('.');
+      resKey.shift();
+
+      const extension = path.extname(imgPath);
+      const form = new FormData();
+      form.append('file', fs.createReadStream(imgPath));
+      form.append('extension', extension);
+
+      const res = await axios.post(uploadUrl, form, {
+        headers: form.getHeaders()
+      });
+      const size = await getFilesize(imgPath);
+      let data;
+      resKey.forEach((key) => {
+        data = data ? data[key] : res[key];
+      });
+      console.log(`Image uploaded: ${data}`);
+      resolve({
+        local: imgPath,
+        url: data,
+        size,
+      });
+    } catch (error) {
+      console.error(`Failed to upload image: ${imgPath}`, error);
+      vscode.window.showErrorMessage(language === 'zh' ? `上传图片失败: ${imgPath}` : `Failed to upload image: ${imgPath}`);
+      vscode.window.showErrorMessage(`${JSON.stringify({
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      })}`);
+      console.log(`uploadImgNoProgress error`);
+      resolve({
+        local: imgPath,
+        url: 'upload error',
+        size: 0,
+      });
+    }
+  });
+}
+
+async function uploadImgFromLocalMulti(pathArr) {
+  const config = vscode.workspace.getConfiguration('img2cdn');
+  const parallelism = config.get('parallelism');
+  const len = pathArr.length;
+  console.log(len, 'len 看看');
+  let resUrl = [];
+  const tasks = pathArr.reduce((acc, i) => {
+    const index = acc.length > 0 ? acc.length - 1 : acc.length;
+    if (!acc[index]) {
+      acc[index] = [];
+    }
+    if (acc[index].length < parallelism) {
+      acc[index].push(uploadImgNoProgress(i));
+    } else {
+      acc.push([uploadImgNoProgress(i)]);
+    }
+    return acc;
+  }, []);
+  console.log(tasks, 'tasks看看');
+  return new Promise((resolve) => {
+    vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: language === 'zh' ? '正在上传图片' : 'Uploading image',
+      cancellable: true
+    }, async (progress, token) => {
+      try {
+        token.onCancellationRequested(() => {
+          console.log("User canceled the long running operation");
+        });
+
+        let count = 0;
+
+        progress.report({ increment: 0, message: language === 'zh' ? '上传中...' : 'Uploading...' });
+
+        for (const arr of tasks) {
+          const res = await Promise.all(arr);
+          resUrl = [...resUrl, ...res];
+
+          count += arr.length;
+          const inc = Math.floor(1 / len * arr.length * 100);
+          console.log(inc, 'inc');
+          progress.report({ increment: inc, message: language === 'zh' ? `上传中，${count}/${len}` : `Uploading, ${count}/${len}` });
+          await new Promise((resolve) => setTimeout(() => resolve(''), 1000));
+        }
+
+        resolve(resUrl);
+      } catch (error) {
+        console.error(`Failed to upload image: ${pathArr.join('||')}`, error);
+        vscode.window.showErrorMessage(language === 'zh' ? `上传图片失败: ${pathArr.join('||')}` : `Failed to upload image: ${pathArr.join('||')}`);
+        vscode.window.showErrorMessage(`${JSON.stringify({
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        })}`);
+        console.log(`uploadImgFromLocalMulti error resUrl: ${resUrl}`);
+        resolve(resUrl);
+      }
+    });
+  });
+}
+
+async function uploadImgFromLocal(localImgPath) {
+  return new Promise((resolve, reject) => {
+    try {
+      vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: language === 'zh' ? '正在上传图片' : 'Uploading image',
+        cancellable: true
+      }, async (progress, token) => {
+        token.onCancellationRequested(() => {
+          console.log("User canceled the long running operation");
+        });
+
+        progress.report({ increment: 0, message: language === 'zh' ? '上传中...' : 'Uploading...' });
+
+        // let compressFile = null;
+        // if (compress) {
+        //   compressFile = await compressImage({
+        //     imagePath,
+        //   });
+        // }
+
+        progress.report({ increment: 50, message: language === 'zh' ? '上传中...' : 'Uploading...' });
+
+        const config = vscode.workspace.getConfiguration('img2cdn');
+        const uploadUrl = config.get('uploadApiUrl');
+        const resKey = config.get('uploadApiResKey').split('.');
+        resKey.shift();
+
+        const extension = path.extname(localImgPath);
+        const form = new FormData();
+        form.append('file', fs.createReadStream(localImgPath));
+        form.append('extension', extension);
+
+        const res = await axios.post(uploadUrl, form, {
+          headers: form.getHeaders()
+        });
+        let data;
+        resKey.forEach((key) => {
+          data = data ? data[key] : res[key];
+        });
+        progress.report({ increment: 80, message: language === 'zh' ? '上传中，快好了...' : 'Uploading, almost there...' });
+        console.log(`Image uploaded: ${data}`);
+
+        resolve(data);
+      });
+
+    } catch (error) {
+      console.error(`Failed to upload image: ${localImgPath}`, error);
+      vscode.window.showErrorMessage(language === 'zh' ? `上传图片失败: ${localImgPath}` : `Failed to upload image: ${localImgPath}`);
+      vscode.window.showErrorMessage(`${JSON.stringify({
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      })}`);
+      resolve(`Error`);
+    }
+  });
 }
 
 async function upload({
@@ -395,7 +650,7 @@ async function compressImage({
         clearTimeout(timeout);
         resolve(null)
       });
-    } catch(error) {
+    } catch (error) {
       console.error(`Failed to compress image: ${imagePath}`, error);
       vscode.window.showErrorMessage(language === 'zh' ? `压缩图片失败: ${imagePath}` : `Failed to compress image: ${imagePath}`);
       vscode.window.showErrorMessage(`${JSON.stringify({

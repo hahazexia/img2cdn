@@ -29,9 +29,22 @@
     "commands": [
       {
         "command": "extension.uploadImage",
-        "title": "Hello World"
+        "title": "uploadImage"
+      },
+      {
+        "command": "extension.img2cdn",
+        "title": "img2cdn"
       }
     ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "extension.img2cdn",
+          "when": "isFileSystemResource || explorerResourceIsFolder",
+          "group": "navigation"
+        }
+      ]
+    },
     "configuration": {
       "title": "img2cdn",
       "properties": {
@@ -49,6 +62,16 @@
           "type": "string",
           "default": "zh",
           "description": "Customize the logger language used by the extension."
+        },
+        "img2cdn.format": {
+          "type": "string",
+          "default": "png|jpg|jpeg|gif|bmp|svg",
+          "description": "A pipe-separated string of image file extensions for use in regexp search patterns when looking for image files."
+        },
+        "img2cdn.parallelism": {
+          "type": "number",
+          "default": 3,
+          "description": "Concurrent number of image uploads."
         },
         "img2cdn.imagePathWhitelist": {
           "type": "string",
@@ -77,7 +100,7 @@
     "lint": "eslint .",
     "pretest": "yarn run lint",
     "test": "vscode-test",
-    "build": "webpack"
+    "build": "rm -rf ./dist && webpack && cd ./panel-webview && npm run build"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.7",
@@ -99,7 +122,7 @@
     "@babel/preset-env": "^7.25.3",
     "axios": "^1.7.2",
     "chokidar": "^3.6.0",
-    "filesize": "^10.1.4",
+    "filesize": "^10.1.6",
     "image-size": "^1.1.1",
     "tinify": "^1.7.1",
     "tmp": "^0.2.3"
