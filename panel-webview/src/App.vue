@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ImagePreview from './ImagePreview.vue';
-import { ref, defineComponent } from 'vue';
+import { ref } from 'vue';
 import useClipboard from 'vue-clipboard3';
 
 const { toClipboard } = useClipboard();
@@ -21,6 +21,7 @@ const images = ref<{
   url: string;
   webviewUrl: string;
   size: string;
+  deleted: boolean;
 }[]>([]);
 
 const x = ref(0);
@@ -28,12 +29,32 @@ const y = ref(0);
 const url = ref();
 const show = ref(false);
 
+const showImgLocalMenu = ref(false);
+const imgLocalMenuUrl = ref('');
+const menuPosition = ref({
+  x: 0,
+  y: 0
+});
+
 window.addEventListener('message', event => {
   const message = event.data;
   switch (message.command) {
     case 'img':
       const data = message?.data?.img;
-      images.value = data;
+      images.value = data.map((i: any) => ({
+        ...i,
+        deleted: false,
+      }));
+      break;
+    case 'deleteLocalImgSuccess':
+      images.value = images.value.map((i: any) => {
+        if (i.local === message?.data) {
+          return {
+            ...i,
+            deleted: true,
+          }
+        }
+      });
       break;
   }
 });
@@ -58,6 +79,29 @@ const imageMouseout = (path: string, event: any) => {
   url.value = '';
   show.value = false;
 };
+
+const imgLocalMenu = (e: any, img: string) => {
+  e?.preventDefault?.();
+  if (img) {
+    imgLocalMenuUrl.value = img;
+    showImgLocalMenu.value = true;
+    menuPosition.value = {
+      x: e.clientX,
+      y: e.clientY,
+    }
+  }
+};
+
+const deleteLocalImg = () => {
+  vscode.postMessage({
+    command: 'deleteLocalImg',
+    data: imgLocalMenuUrl.value,
+  });
+};
+
+document.addEventListener('click', () => {
+  showImgLocalMenu.value = false;
+});
 </script>
 
 <template>
@@ -82,14 +126,16 @@ const imageMouseout = (path: string, event: any) => {
         </tr>
       </thead>
       <tbody v-if="images.length > 0">
-        <tr v-for="(item, index) in images" :key="index">
+        <tr v-for="(item, index) in images" :key="index" :class="item?.deleted ? 'deleted' : ''">
           <td>{{ index + 1 }}</td>
           <td>{{ item.size }}</td>
           <td>
             <img :src="item?.webviewUrl || ''" alt="" @mouseover="imageMouseover(item?.webviewUrl, $event)"
             @mouseout="imageMouseout(item?.webviewUrl, $event)">
           </td>
-          <td class="cursor image-name" @click="openFile(item.local)">{{ item?.local || '' }}</td>
+          <td class="cursor image-name" @click="openFile(item.local)"
+            @contextmenu="(e) => imgLocalMenu(e, item?.local)"
+          >{{ item?.local || '' }}</td>
           <td class="cursor" @click="copy(item.url)">
             {{ item.url }}
           </td>
@@ -98,6 +144,13 @@ const imageMouseout = (path: string, event: any) => {
     </table>
   </div>
   <ImagePreview :url="url" :showPreview="show" :x="x + 10" :y="y + 10" />
+  <div class="img-local-menu" :style="{
+    top: `${menuPosition.y}px`,
+    left: `${menuPosition.x}px`,
+    display: showImgLocalMenu ? 'block' : 'none',
+  }">
+    <div class="img-local-menu-item" @click="deleteLocalImg">delete</div>
+  </div>
 </template>
 
 <style scoped lang="scss">
@@ -121,11 +174,33 @@ const imageMouseout = (path: string, event: any) => {
   td, th {
     padding: 10px;
   }
+  .deleted td {
+    text-decoration: line-through;
+  }
   .cursor {
     cursor: pointer;
   }
   .image-name:hover {
     color: rgb(116, 94, 224);
+  }
+}
+.img-local-menu {
+  display: none;
+  position: fixed;
+  min-width: 100px;
+  background-color: #B8B9B7;
+  border-radius: 8px;
+  padding: 10px;
+  .img-local-menu-item {
+    padding-left: 10px;
+    line-height: 30px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #000;
+    &:hover {
+      color: #fff;
+      background-color: #336ED1;
+    }
   }
 }
 </style>

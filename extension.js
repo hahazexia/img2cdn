@@ -126,6 +126,18 @@ function activate(context) {
             case 'copySuccess':
               vscode.window.showInformationMessage(language === 'zh' ? `图片 url 复制成功！` : `image url copy success!`);
               break;
+            case 'deleteLocalImg':
+              try {
+                fs.unlinkSync(message.data);
+                panel.webview.postMessage({
+                  command: 'deleteLocalImgSuccess',
+                  data: message.data,
+                });
+                vscode.window.showInformationMessage(`删除图片成功！`);
+              } catch(error) {
+                vscode.window.showErrorMessage(`Error delete local file: ${error.message}`);
+              }
+              break;
           }
         } catch (err) {
           console.log(err, 'onDidReceiveMessage err');
