@@ -23,6 +23,7 @@ const images = ref<{
   size: string;
   deleted: boolean;
 }[]>([]);
+const isDarkTheme = ref(true);
 
 const x = ref(0);
 const y = ref(0);
@@ -41,6 +42,8 @@ window.addEventListener('message', event => {
   switch (message.command) {
     case 'img':
       const data = message?.data?.img;
+      const theme = message?.data?.isDarkTheme;
+      isDarkTheme.value = theme;
       images.value = data.map((i: any) => ({
         ...i,
         deleted: false,
@@ -105,7 +108,7 @@ document.addEventListener('click', () => {
 </script>
 
 <template>
-  <div class="panel">
+  <div :class="{ panel: true, 'white-theme': !isDarkTheme }" >
     <h2>img2cdn local upload result</h2>
     <div class="total">
       total: {{ images.length }}
@@ -154,6 +157,10 @@ document.addEventListener('click', () => {
 </template>
 
 <style scoped lang="scss">
+.white-theme {
+  background-color: #fff!important;
+  color: #000;
+}
 .panel {
   background-color: #272822;
   .total {

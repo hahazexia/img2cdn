@@ -12,6 +12,7 @@ const chokidar = require('chokidar');
 const tinify = require("tinify");
 const config = vscode.workspace.getConfiguration('img2cdn');
 const apiKey = config.get('tinypngApiKey') || 'yv06NdJfZ79WjWTtyKgcZq6dVdCVY4nk';
+const isDarkTheme = config.get('isDarkTheme') || true;
 tinify.key = apiKey;
 
 const tempDir = os.tmpdir();
@@ -69,7 +70,7 @@ function activate(context) {
     console.log(uri, 'uri');
     const filePath = uri.fsPath;
     console.log(`filePath: ${filePath}`);
-    const imgExtReg = new RegExp(`\\.(${format})$`, 'g');
+    const imgExtReg = new RegExp(`\\.(${format})$`, 'i');
     const isImgFile = imgExtReg.test(filePath);
     let resImg = [];
 
@@ -86,7 +87,13 @@ function activate(context) {
       ];
     } else {
       const files = await fs.promises.readdir(filePath);
-      const fileArray = files.map(file => path.join(filePath, file));
+      const fileArray = files.map(file => path.join(filePath, file)).filter(file => {
+        const temp = imgExtReg.test(file);
+        console.log(file, 'file看看');
+        console.log(temp, 'temp看看');
+        console.log(imgExtReg, 'imgExtReg看看');
+        return temp;
+      });
       resImg = await uploadImgFromLocalMulti(fileArray);
     }
 
@@ -113,6 +120,7 @@ function activate(context) {
           ...i,
           webviewUrl: handleWebviewImagesUri(i.local, panel)
         })),
+        isDarkTheme,
       },
     });
 
