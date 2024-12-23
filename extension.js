@@ -146,6 +146,12 @@ function activate(context) {
                 vscode.window.showErrorMessage(`Error delete local file: ${error.message}`);
               }
               break;
+            case 'getTheme':
+              panel.webview.postMessage({
+                command: 'theme',
+                data: isDarkTheme,
+              });
+              break;
           }
         } catch (err) {
           console.log(err, 'onDidReceiveMessage err');

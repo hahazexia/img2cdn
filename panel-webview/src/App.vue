@@ -42,8 +42,6 @@ window.addEventListener('message', event => {
   switch (message.command) {
     case 'img':
       const data = message?.data?.img;
-      const theme = message?.data?.isDarkTheme;
-      isDarkTheme.value = theme;
       images.value = data.map((i: any) => ({
         ...i,
         deleted: false,
@@ -59,7 +57,15 @@ window.addEventListener('message', event => {
         }
       });
       break;
+    case 'theme':
+      const theme = message?.data;
+      isDarkTheme.value = theme;
+      break;
   }
+});
+
+vscode.postMessage({
+  command: 'getTheme',
 });
 
 const openFile = (img: any) => {
