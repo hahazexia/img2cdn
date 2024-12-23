@@ -59,6 +59,7 @@ window.addEventListener('message', event => {
       break;
     case 'theme':
       const theme = message?.data;
+      console.log(theme, 'theme看看');
       isDarkTheme.value = theme;
       break;
   }

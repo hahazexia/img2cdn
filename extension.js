@@ -12,7 +12,7 @@ const chokidar = require('chokidar');
 const tinify = require("tinify");
 const config = vscode.workspace.getConfiguration('img2cdn');
 const apiKey = config.get('tinypngApiKey') || 'yv06NdJfZ79WjWTtyKgcZq6dVdCVY4nk';
-const isDarkTheme = config.get('isDarkTheme') || true;
+
 tinify.key = apiKey;
 
 const tempDir = os.tmpdir();
@@ -120,10 +120,10 @@ function activate(context) {
           ...i,
           webviewUrl: handleWebviewImagesUri(i.local, panel)
         })),
-        isDarkTheme,
       },
     });
 
+    const config = vscode.workspace.getConfiguration('img2cdn');
     panel.webview.onDidReceiveMessage(
       message => {
         try {
@@ -149,7 +149,7 @@ function activate(context) {
             case 'getTheme':
               panel.webview.postMessage({
                 command: 'theme',
-                data: isDarkTheme,
+                data: config.get('isDarkTheme'),
               });
               break;
           }
