@@ -24,13 +24,10 @@ if (!fs.existsSync(tempPath)) {
 const imageCache = new Map();
 tmp.setGracefulCleanup();
 
-let language = 'en'; // en zh
-let format = 'png|jpg|jpeg|gif|bmp|svg';
+// let language = 'en'; // en zh
+// let format = 'png|jpg|jpeg|gif|bmp|svg';
 
 function activate(context) {
-  const config = vscode.workspace.getConfiguration('img2cdn');
-  language = config.get('language');
-  format = config.get('format');
   const resourceRoot = vscode.Uri.joinPath(context.extensionUri, 'dist');
 
   context.subscriptions.push(
@@ -70,6 +67,10 @@ function activate(context) {
     console.log(uri, 'uri');
     const filePath = uri.fsPath;
     console.log(`filePath: ${filePath}`);
+
+    const config = vscode.workspace.getConfiguration('img2cdn');
+    const language = config.get('language');
+    const format = config.get('format');
     const imgExtReg = new RegExp(`\\.(${format})$`, 'i');
     const isImgFile = imgExtReg.test(filePath);
     let resImg = [];
@@ -123,7 +124,6 @@ function activate(context) {
       },
     });
 
-    const config = vscode.workspace.getConfiguration('img2cdn');
     panel.webview.onDidReceiveMessage(
       message => {
         try {
@@ -182,11 +182,13 @@ async function openFile(filePath) {
 class ImageCodeLensProvider {
   provideCodeLenses(document, token) {
     try {
+      const config = vscode.workspace.getConfiguration('img2cdn');
+      const language = config.get('language');
+      const format = config.get('format');
       const imageRegex = new RegExp(`(import\\s*([^\\s]+)\\s*from\\s*)?(['"\`]|url\\(['"\`]?|src=['"\`])(.*\\.(?:${format}))`, 'g');
       const content = document.getText();
       const codeLenses = [];
 
-      const config = vscode.workspace.getConfiguration('img2cdn');
       const imagePathWhitelist = config.get('imagePathWhitelist');
       const imagePathWhitelistArr = imagePathWhitelist ? imagePathWhitelist.split(',') : [];
 
@@ -262,6 +264,8 @@ class ImageCodeLensProvider {
 
       return codeLenses;
     } catch (err) {
+      const config = vscode.workspace.getConfiguration('img2cdn');
+      const language = config.get('language');
       console.error(err);
       vscode.window.showErrorMessage(language === 'zh' ? `创建 codelens 对象失败: ${err}` : `Failed to provide codelenses: ${err}`);
     }
@@ -270,6 +274,9 @@ class ImageCodeLensProvider {
 
 class ImageHoverProvider {
   async provideHover(document, position, token) {
+    const config = vscode.workspace.getConfiguration('img2cdn');
+    const language = config.get('language');
+    const format = config.get('format');
     const imageRegex = new RegExp(`(import\\s*([^\\s]+)\\s*from\\s*)?(['"\`]|url\\(['"\`]?|src=['"\`])(.*\\.(?:${format}))`, 'g');
     const range = document.getWordRangeAtPosition(position, imageRegex);
 
@@ -315,6 +322,8 @@ async function getFilesize(source) {
     const { filesize } = await import('filesize');
     return filesize(fsStat.size, { standard: 'jedec' });
   } catch (err) {
+    const config = vscode.workspace.getConfiguration('img2cdn');
+    const language = config.get('language');
     console.error(`Failed to get filesize: ${source}`, err);
     vscode.window.showErrorMessage(language === 'zh' ? `获取图片大小失败: ${source}` : `Failed to get filesize: ${source}`);
     return '';
@@ -361,6 +370,8 @@ async function download(imageUrl) {
 
     return filePath;
   } catch (err) {
+    const config = vscode.workspace.getConfiguration('img2cdn');
+    const language = config.get('language');
     console.error(`Failed to download image: ${imageUrl}`, err);
     vscode.window.showErrorMessage(language === 'zh' ? `下载图片失败: ${imageUrl}` : `Failed to download image: ${imageUrl}`);
   }
@@ -385,6 +396,8 @@ async function downloadAndUpload({
       compress,
     });
   } catch (error) {
+    const config = vscode.workspace.getConfiguration('img2cdn');
+    const language = config.get('language');
     console.error(`Failed to download and upload image: ${imagePath}`, error);
     vscode.window.showErrorMessage(language === 'zh' ? `下载并上传图片失败: ${imagePath}` : `Failed to download and upload image: ${imagePath}`);
   }
@@ -418,6 +431,8 @@ async function uploadImgNoProgress(imgPath) {
         size,
       });
     } catch (error) {
+      const config = vscode.workspace.getConfiguration('img2cdn');
+      const language = config.get('language');
       console.error(`Failed to upload image: ${imgPath}`, error);
       vscode.window.showErrorMessage(language === 'zh' ? `上传图片失败: ${imgPath}` : `Failed to upload image: ${imgPath}`);
       vscode.window.showErrorMessage(`${JSON.stringify({
@@ -437,6 +452,7 @@ async function uploadImgNoProgress(imgPath) {
 
 async function uploadImgFromLocalMulti(pathArr) {
   const config = vscode.workspace.getConfiguration('img2cdn');
+  const language = config.get('language');
   const parallelism = config.get('parallelism');
   const len = pathArr.length;
   console.log(len, 'len 看看');
@@ -499,6 +515,8 @@ async function uploadImgFromLocalMulti(pathArr) {
 async function uploadImgFromLocal(localImgPath) {
   return new Promise((resolve, reject) => {
     try {
+      const config = vscode.workspace.getConfiguration('img2cdn');
+      const language = config.get('language');
       vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
         title: language === 'zh' ? '正在上传图片' : 'Uploading image',
@@ -543,6 +561,8 @@ async function uploadImgFromLocal(localImgPath) {
       });
 
     } catch (error) {
+      const config = vscode.workspace.getConfiguration('img2cdn');
+      const language = config.get('language');
       console.error(`Failed to upload image: ${localImgPath}`, error);
       vscode.window.showErrorMessage(language === 'zh' ? `上传图片失败: ${localImgPath}` : `Failed to upload image: ${localImgPath}`);
       vscode.window.showErrorMessage(`${JSON.stringify({
@@ -564,6 +584,8 @@ async function upload({
   compress,
 }) {
   try {
+    const config = vscode.workspace.getConfiguration('img2cdn');
+    const language = config.get('language');
     vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: language === 'zh' ? '正在上传图片' : 'Uploading image',
@@ -622,6 +644,8 @@ async function upload({
       return p;
     });
   } catch (error) {
+    const config = vscode.workspace.getConfiguration('img2cdn');
+    const language = config.get('language');
     console.error(`Failed to upload image: ${imagePath}`, error);
     vscode.window.showErrorMessage(language === 'zh' ? `上传图片失败: ${imagePath}` : `Failed to upload image: ${imagePath}`);
     vscode.window.showErrorMessage(`${JSON.stringify({
@@ -638,6 +662,8 @@ async function compressImage({
   return new Promise((resolve, reject) => {
 
     try {
+      const config = vscode.workspace.getConfiguration('img2cdn');
+      const language = config.get('language');
       const tempFile = tmp.fileSync({
         tmpdir: tempPath,
         postfix: imagePath ? path.parse(imagePath).ext : '.png',
@@ -645,8 +671,6 @@ async function compressImage({
       const compressImgPath = tempFile.name;
       console.log(`compressImgPath: ${compressImgPath}`);
 
-
-      const config = vscode.workspace.getConfiguration('img2cdn');
       const tinypngTimeout = config.get('tinypngTimeout')
       const timeout = setTimeout(() => {
         vscode.window.showErrorMessage(language === 'zh' ? `tinypng压缩图片超时: ${imagePath}` : `Tinypng compress timeout: ${imagePath}`);
@@ -677,6 +701,8 @@ async function compressImage({
         resolve(null)
       });
     } catch (error) {
+      const config = vscode.workspace.getConfiguration('img2cdn');
+      const language = config.get('language');
       console.error(`Failed to compress image: ${imagePath}`, error);
       vscode.window.showErrorMessage(language === 'zh' ? `压缩图片失败: ${imagePath}` : `Failed to compress image: ${imagePath}`);
       vscode.window.showErrorMessage(`${JSON.stringify({
@@ -698,6 +724,8 @@ async function replaceImage({
   isLocal,
 }) {
   try {
+    const config = vscode.workspace.getConfiguration('img2cdn');
+    const language = config.get('language');
     const name = getBasenameFormUrl(originalImagePath);
     const edit = new vscode.WorkspaceEdit();
     edit.replace(document.uri, range, `'${cdnUrl}'`);
@@ -739,8 +767,6 @@ async function replaceImage({
     const refs = await vscode.workspace.findFiles(name, '**​/node_modules/**', Infinity);
     console.log(refs, '看看refs');
 
-
-    const config = vscode.workspace.getConfiguration('img2cdn');
     const deleteLocalImage = config.get('deleteLocalImage');
 
     if (isLocal && deleteLocalImage) {
@@ -759,6 +785,8 @@ async function replaceImage({
       });
     }
   } catch (error) {
+    const config = vscode.workspace.getConfiguration('img2cdn');
+    const language = config.get('language');
     console.error(`Failed to replace CDN URL: ${cdnUrl}`, error);
     vscode.window.showErrorMessage(language === 'zh' ? `${getBasenameFormUrl(originalImagePath)} 替换 cdn 地址失败: ${cdnUrl}` : `Failed to replace CDN URL: ${cdnUrl}`);
   }
